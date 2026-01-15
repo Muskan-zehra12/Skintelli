@@ -1,0 +1,209 @@
+{
+  "knowledge_base": {
+    "melanoma": {
+      "name": "Melanoma",
+      "description": "Most serious type of skin cancer, arising from melanocytes",
+      "characteristics": [
+        "Asymmetrical shape",
+        "Irregular borders",
+        "Multiple colors (brown, black, red, white)",
+        "Diameter larger than a pencil eraser (>6mm)",
+        "Rapid growth or change over time",
+        "Bleeding or oozing",
+        "Itching or tenderness"
+      ],
+      "risk_factors": [
+        "Excessive UV exposure",
+        "Fair skin and light hair/eyes",
+        "Presence of atypical moles",
+        "Family history of melanoma",
+        "Severe sunburns during childhood",
+        "Immunosuppression"
+      ],
+      "epidemiology": "Accounts for 1% of skin cancers but 99% of deaths",
+      "5_year_survival": "95% if caught early, drops significantly with progression",
+      "recommendations": [
+        "Immediate dermatology referral",
+        "Possible biopsy and staging",
+        "Regular monitoring",
+        "Sun protection and preventive measures",
+        "Consider genetic counseling"
+      ],
+      "prevention": "Daily SPF 30+ sunscreen, avoid peak sun hours, regular self-examination"
+    },
+    "basal_cell_carcinoma": {
+      "name": "Basal Cell Carcinoma (BCC)",
+      "description": "Most common type of skin cancer, arises from basal cells in epidermis",
+      "characteristics": [
+        "Pearly or waxy nodule",
+        "Pink, red, or flesh-colored",
+        "Central ulceration with rolled edges",
+        "Telangiectasia (small blood vessels visible)",
+        "Bleeds easily",
+        "Slow growth"
+      ],
+      "risk_factors": [
+        "Chronic UV exposure",
+        "Fair skin",
+        "Age over 50",
+        "Male gender",
+        "Outdoor occupations",
+        "History of BCC"
+      ],
+      "epidemiology": "80% of non-melanoma skin cancers",
+      "5_year_survival": ">99% with appropriate treatment",
+      "recommendations": [
+        "Dermatology consultation",
+        "Possible biopsy",
+        "Treatment options: excision, Mohs surgery, cryotherapy, curettage",
+        "Regular follow-up",
+        "Sun protection"
+      ],
+      "prevention": "Sunscreen SPF 30+, protective clothing, regular skin checks"
+    },
+    "squamous_cell_carcinoma": {
+      "name": "Squamous Cell Carcinoma (SCC)",
+      "description": "Second most common skin cancer, arises from squamous cells",
+      "characteristics": [
+        "Scaly, crusty bump",
+        "Red or brown nodule",
+        "Ulceration with raised edges",
+        "Rapid growth",
+        "Bleeding or oozing",
+        "May appear on ears, lips, or sun-exposed areas"
+      ],
+      "risk_factors": [
+        "Cumulative UV exposure",
+        "Fair skin",
+        "Immunosuppression",
+        "History of actinic keratosis",
+        "Age over 50",
+        "Previous skin cancer"
+      ],
+      "epidemiology": "15-20% of non-melanoma skin cancers",
+      "5_year_survival": "95% if caught early, varies with stage",
+      "recommendations": [
+        "Dermatology referral",
+        "Possible biopsy and staging",
+        "Treatment: surgical excision, Mohs surgery, or radiation",
+        "Monitor for metastasis",
+        "Regular follow-up"
+      ],
+      "prevention": "SPF 30+ daily, protective clothing, avoid peak sun, stop smoking"
+    },
+    "benign_keratosis": {
+      "name": "Benign Keratosis (Seborrheic Keratosis)",
+      "description": "Common, harmless, non-cancerous growth",
+      "characteristics": [
+        "Brown, black, or tan lesion",
+        "Waxy or scaly appearance",
+        "Stuck-on appearance",
+        "Sharply demarcated borders",
+        "Rapid growth possible",
+        "Very common in older adults"
+      ],
+      "risk_factors": [
+        "Age (increases with age)",
+        "Genetic predisposition",
+        "Fair skin",
+        "Sun exposure",
+        "Female gender"
+      ],
+      "epidemiology": "Most common benign skin growth in older adults",
+      "5_year_survival": "Not applicable (benign)",
+      "recommendations": [
+        "No treatment necessary unless for cosmetic reasons",
+        "Can be removed by dermatologist if desired",
+        "Cryotherapy or curettage are options",
+        "Confirm diagnosis to rule out malignancy",
+        "Monitor for changes"
+      ],
+      "prevention": "Regular self-examination, sun protection, dermatology check-ups"
+    },
+    "nevus": {
+      "name": "Nevus (Mole)",
+      "description": "Common benign skin growth from melanocytes",
+      "characteristics": [
+        "Brown or tan lesion",
+        "Symmetrical shape",
+        "Regular borders",
+        "Uniform color",
+        "Typically less than 6mm",
+        "Stable appearance"
+      ],
+      "risk_factors": [
+        "Genetic predisposition",
+        "Fair skin",
+        "Sun exposure",
+        "Family history",
+        "Age (can appear throughout life)"
+      ],
+      "epidemiology": "Average person has 10-40 nevi",
+      "5_year_survival": "Not applicable (benign)",
+      "recommendations": [
+        "Regular monitoring and self-examination",
+        "Removal if cosmetically desired",
+        "Watch for ABCDE changes",
+        "Annual dermatology check for high-risk individuals",
+        "Sun protection"
+      ],
+      "prevention": "Sun protection, regular skin checks, family monitoring if high-risk"
+    },
+    "actinic_keratosis": {
+      "name": "Actinic Keratosis (Solar Keratosis)",
+      "description": "Precancerous lesion caused by sun damage",
+      "characteristics": [
+        "Scaly, rough patch",
+        "Red, pink, or tan coloring",
+        "Tender or painful",
+        "May have horn-like projection",
+        "Usually on face, ears, hands, arms",
+        "More felt than seen"
+      ],
+      "risk_factors": [
+        "Chronic UV exposure",
+        "Fair skin",
+        "Age over 40",
+        "Immunosuppression",
+        "Male gender",
+        "History of many nevi"
+      ],
+      "epidemiology": "~58 million cases in US, precursor to SCC",
+      "5_year_survival": "Not applicable (precancerous)",
+      "recommendations": [
+        "Treatment to prevent SCC development",
+        "Cryotherapy (freezing) is standard",
+        "Topical treatments: 5-FU, imiquimod, diclofenac",
+        "Photodynamic therapy",
+        "Regular monitoring",
+        "Aggressive sun protection"
+      ],
+      "prevention": "Daily SPF 30+, protective clothing, avoid sun 10am-4pm, sunglasses"
+    },
+    "general_recommendations": {
+      "skin_self_examination": [
+        "Perform monthly self-examination",
+        "Use ABCDE rule: Asymmetry, Border irregularity, Color variation, Diameter >6mm, Evolving/changing",
+        "Use mirror or ask partner to check hard-to-see areas",
+        "Note any new growths or changes",
+        "Take photos to track changes over time"
+      ],
+      "sun_protection": [
+        "Use broad-spectrum SPF 30+ sunscreen",
+        "Reapply every 2 hours and after swimming",
+        "Wear protective clothing: hat, sunglasses, long sleeves",
+        "Seek shade during 10am-4pm",
+        "Avoid tanning beds and sun lamps",
+        "Check UV index and plan accordingly"
+      ],
+      "medical_consultation": [
+        "Annual dermatology check-up",
+        "See dermatologist for any suspicious lesions",
+        "Discuss personal and family skin cancer history",
+        "Ask about preventive measures",
+        "Keep records of skin lesions"
+      ],
+      "early_detection": "Early detection significantly improves survival rates for all skin cancers. When in doubt, consult a dermatologist."
+    }
+  }
+}

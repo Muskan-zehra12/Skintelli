@@ -45,4 +45,12 @@ env/
 # Project specific
 *.db
 *.log
+*.keras
+*.h5
+*.pt
+*.pth
+*.onnx
+*.tflite
+desktop/src/models/
 src/data/user_data/
+users.json

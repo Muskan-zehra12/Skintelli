@@ -1,17 +1,17 @@
 [project]
-name = "fyp-1"
-version = "0.1.0"
-description = "Desktop application for offline skin disease screening with Explainable AI."
+name = "skintelli"
+version = "1.1.0"
+description = "AI-powered desktop application for skin disease detection with live camera, authentication, and freemium monetization."
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [
+    {name = "Muskan", email = "muskan@skintelli.app"}
+]
+keywords = ["skin-disease", "detection", "pyqt6", "opencv", "ai", "desktop-app"]
 dependencies = [
-    "streamlit>=1.50.0",
-    "streamlit-option-menu>=0.4.0",
-    "torch",
-    "ultralytics",
-    "opencv-python",
-    "faiss-cpu",
-    "llama-cpp-python",
+    "PyQt6>=6.10.0",
+    "opencv-python>=4.8.0",
+    "numpy>=2.0.0",
 ]
 
 [tool.setuptools.packages.find]

@@ -19,10 +19,11 @@ class DualPanelWidget(QWidget):
         layout.setSpacing(15)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        # Controls Layout
+        # Hide controls layout - main window has controls now
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(10)
         
+        # Keep buttons for compatibility but hide them
         self.upload_btn = QPushButton("📁 Upload Image")
         self.camera_btn = QPushButton("📷 Use Camera")
         self.capture_btn = QPushButton("📸 Capture Image")
@@ -30,12 +31,11 @@ class DualPanelWidget(QWidget):
         self.analyze_btn = QPushButton("🔬 Analyze")
         self.analyze_btn.setEnabled(False)
         
-        self.upload_btn = QPushButton("📁 Upload Image")
-        self.camera_btn = QPushButton("📷 Use Camera")
-        self.capture_btn = QPushButton("📸 Capture Image")
-        self.capture_btn.setEnabled(False)
-        self.analyze_btn = QPushButton("🔬 Analyze")
-        self.analyze_btn.setEnabled(False)
+        # Hide all control buttons
+        self.upload_btn.setVisible(False)
+        self.camera_btn.setVisible(False)
+        self.capture_btn.setVisible(False)
+        self.analyze_btn.setVisible(False)
         
         # Style buttons
         button_style = """
@@ -644,3 +644,55 @@ class DualPanelWidget(QWidget):
         self.explanation_label.setText("Diagnosis and explanation will appear here.")
         self.analyze_btn.setEnabled(False)
         self.capture_btn.setEnabled(False)
+    
+    def set_original_image(self, image_path: str):
+        """Load and display an image from file path"""
+        try:
+            import cv2
+            import os
+            
+            # Load image
+            image = cv2.imread(image_path)
+            if image is None:
+                QMessageBox.warning(self, "Error", "Could not load image file")
+                return
+            
+            self.current_image = image
+            
+            # Convert and display
+            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb.shape
+            qimg = QImage(rgb.data, w, h, w * ch, QImage.Format.Format_RGB888)
+            pixmap = QPixmap.fromImage(qimg)
+            scaled_pixmap = pixmap.scaled(self.original_image_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            self.original_image_label.setPixmap(scaled_pixmap)
+            self.analyze_btn.setEnabled(True)
+            
+            # Show file info
+            file_name = os.path.basename(image_path)
+            file_size = os.path.getsize(image_path) / 1024
+            
+            self.explanation_label.setText(
+                f"✅ Image Loaded\n\n"
+                f"📄 File: {file_name}\n"
+                f"📏 Size: {file_size:.1f} KB\n"
+                f"🔍 Image ready for analysis. Click 'Analyze' button."
+            )
+            self.explanation_label.setStyleSheet("""
+                QLabel {
+                    padding: 15px;
+                    background-color: #d5f4e6;
+                    border-radius: 6px;
+                    border-left: 4px solid #27ae60;
+                    color: #333;
+                    font-size: 11px;
+                    line-height: 1.5;
+                }
+            """)
+            
+            # Reset analysis panel
+            self.analysis_image_label.setText("Waiting for analysis...")
+            self.analysis_image_label.setPixmap(QPixmap())
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load image: {str(e)}")

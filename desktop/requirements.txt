@@ -1,5 +1,19 @@
-PyQt6
-opencv-python
-onnxruntime
-fpdf2
-pytest
+# Core Dependencies
+PyQt6>=6.10.0
+opencv-python>=4.8.0
+numpy>=2.0.0
+
+# Optional Dependencies (for future features)
+# onnxruntime
+# fpdf2
+# pytest
+# tensorflow>=2.10.0
+# tensorflow-hub
+# tf-keras
+# scikit-learn
+# matplotlib
+# pandas
+# google-auth-oauthlib
+# google-auth-httplib2
+# google-api-python-client
+# gdown
