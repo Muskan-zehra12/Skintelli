@@ -1,23 +1,74 @@
+"""
+Unified Main Window for Skintelli Application
+Combines modern UI with complete authentication, analysis, and history features
+"""
+
 import sys
+import logging
+from pathlib import Path
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
                              QStackedWidget, QMessageBox, QTabWidget, QLineEdit, QTextEdit, 
-                             QGridLayout, QCheckBox, QScrollArea)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont, QColor
+                             QGridLayout, QCheckBox, QScrollArea, QTableWidget, QTableWidgetItem,
+                             QFileDialog, QProgressBar, QComboBox, QSpinBox, QDateEdit)
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+from PyQt6.QtGui import QFont, QColor, QPixmap, QIcon
 from ui.widgets.dual_panel import DualPanelWidget
 from core.auth import UserManager
 from core.usage_tracker import GuestUsageTracker
+from core.skin_analyzer import SkinAnalyzer
+
+logger = logging.getLogger(__name__)
+
+
+class AnalysisWorker(QThread):
+    """Worker thread for analysis to prevent UI freezing"""
+    
+    progress = pyqtSignal(str)
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    
+    def __init__(self, image_path: str):
+        super().__init__()
+        self.image_path = image_path
+        self.analyzer = SkinAnalyzer()
+    
+    def run(self):
+        try:
+            import cv2
+            self.progress.emit("Loading image...")
+            image = cv2.imread(self.image_path)
+            
+            if image is None:
+                self.error.emit("Failed to load image.")
+                return
+            
+            self.progress.emit("Analyzing image...")
+            result = self.analyzer.analyze_image(image)
+            
+            if result:
+                self.finished.emit(result)
+            else:
+                self.error.emit("Analysis failed. Please check the image and try again.")
+                
+        except Exception as e:
+            self.error.emit(f"Error during analysis: {str(e)}")
+            logger.error(f"Analysis error: {e}", exc_info=True)
+
 
 class MainWindow(QMainWindow):
+    """Main unified application window with authentication, analysis, and history"""
+    
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Skintelli - Intelligent Skin Disease Detection")
-        self.setMinimumSize(1200, 800)
+        self.setWindowTitle("Skintelli - Intelligent Skin Disease Detection System")
+        self.setMinimumSize(1300, 850)
         
-        # Initialize auth and usage tracking
+        # Initialize services
         self.user_manager = UserManager()
         self.guest_tracker = GuestUsageTracker()
         self.is_guest = False
+        self.analysis_history = []
+        self.analysis_worker = None
         
         # Central Widget and Main Layout
         self.central_widget = QWidget()
@@ -32,12 +83,14 @@ class MainWindow(QMainWindow):
         # Create all screens
         self.auth_screen = self.create_auth_screen()
         self.analysis_screen = self.create_analysis_screen()
+        self.history_screen = self.create_history_screen()
         self.paywall_screen = self.create_paywall_screen()
         
         # Add screens to stack
         self.main_stack.addWidget(self.auth_screen)      # Index 0
         self.main_stack.addWidget(self.analysis_screen)   # Index 1
-        self.main_stack.addWidget(self.paywall_screen)    # Index 2
+        self.main_stack.addWidget(self.history_screen)    # Index 2
+        self.main_stack.addWidget(self.paywall_screen)    # Index 3
         
         # Show appropriate screen on startup
         if self.user_manager.is_logged_in():
@@ -47,6 +100,7 @@ class MainWindow(QMainWindow):
         
         # Status Bar
         self.statusBar().showMessage("Ready")
+        logger.info("Main window initialized successfully")
     
     def create_auth_screen(self) -> QWidget:
         """Create authentication screen with signup/signin tabs."""
@@ -56,48 +110,55 @@ class MainWindow(QMainWindow):
         
         # Title
         title = QLabel("Skintelli")
-        title.setFont(QFont("Arial", 28, QFont.Weight.Bold))
+        title.setFont(QFont("Arial", 32, QFont.Weight.Bold))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
         
-        subtitle = QLabel("Intelligent Skin Disease Detection")
-        subtitle.setFont(QFont("Arial", 12))
+        subtitle = QLabel("🩺 Intelligent Skin Disease Detection System")
+        subtitle.setFont(QFont("Arial", 13))
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(subtitle)
         
-        layout.addSpacing(20)
+        layout.addSpacing(25)
         
         # Tab Widget
         self.auth_tabs = QTabWidget()
         
         # Sign In Tab
         signin_widget = self.create_signin_tab()
-        self.auth_tabs.addTab(signin_widget, "Sign In")
+        self.auth_tabs.addTab(signin_widget, "🔓 Sign In")
         
         # Sign Up Tab
         signup_widget = self.create_signup_tab()
-        self.auth_tabs.addTab(signup_widget, "Sign Up")
+        self.auth_tabs.addTab(signup_widget, "✨ Sign Up")
         
         layout.addWidget(self.auth_tabs)
         
+        layout.addSpacing(15)
+        
         # Guest Button
-        guest_btn = QPushButton("Continue as Guest (3 free attempts)")
-        guest_btn.setMinimumHeight(40)
+        guest_btn = QPushButton("👤 Continue as Guest (3 free attempts)")
+        guest_btn.setMinimumHeight(45)
         guest_btn.setStyleSheet("""
             QPushButton {
                 background-color: #95a5a6;
                 color: white;
                 border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 font-weight: bold;
                 font-size: 12px;
             }
             QPushButton:hover {
                 background-color: #7f8c8d;
             }
+            QPushButton:pressed {
+                background-color: #616770;
+            }
         """)
         guest_btn.clicked.connect(self.handle_guest_login)
         layout.addWidget(guest_btn)
+        
+        return auth_widget
         
         return auth_widget
     
@@ -304,7 +365,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(analysis_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         
-        # Header with user info
+        # Header with user info and history button
         header = QWidget()
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(15, 10, 15, 10)
@@ -314,6 +375,25 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.user_label)
         
         header_layout.addStretch()
+        
+        history_btn = QPushButton("📋 History")
+        history_btn.setMaximumWidth(120)
+        history_btn.clicked.connect(self.show_history_screen)
+        history_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 6px 12px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #8e44ad;
+            }
+        """)
+        header_layout.addWidget(history_btn)
         
         self.btn_logout = QPushButton("Logout")
         self.btn_logout.setMaximumWidth(100)
@@ -459,6 +539,60 @@ class MainWindow(QMainWindow):
         
         return paywall_widget
     
+    def create_history_screen(self) -> QWidget:
+        """Create analysis history screen."""
+        history_widget = QWidget()
+        layout = QVBoxLayout(history_widget)
+        layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Header
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        
+        title = QLabel("📋 Analysis History")
+        title.setStyleSheet("font-weight: bold; font-size: 16px; color: #333;")
+        header_layout.addWidget(title)
+        
+        header_layout.addStretch()
+        
+        back_btn = QPushButton("← Back to Analysis")
+        back_btn.clicked.connect(self.show_analysis_screen)
+        back_btn.setMaximumWidth(150)
+        header_layout.addWidget(back_btn)
+        
+        layout.addWidget(header)
+        
+        # History table
+        self.history_table = QTableWidget()
+        self.history_table.setColumnCount(5)
+        self.history_table.setHorizontalHeaderLabels([
+            "Date", "Diagnosis", "Severity", "Confidence", "Actions"
+        ])
+        self.history_table.setStyleSheet("""
+            QTableWidget {
+                border: 1px solid #ddd;
+                gridline-color: #eee;
+            }
+            QHeaderView::section {
+                background-color: #f5f5f5;
+                padding: 5px;
+                border: none;
+                border-right: 1px solid #ddd;
+                font-weight: bold;
+            }
+        """)
+        layout.addWidget(self.history_table)
+        
+        # Placeholder text if no history
+        self.history_empty = QLabel("No analysis history yet. Start by analyzing an image.")
+        self.history_empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.history_empty.setStyleSheet("color: #999; font-size: 14px; padding: 20px;")
+        layout.addWidget(self.history_empty)
+        
+        layout.addStretch()
+        
+        return history_widget
+    
     def show_auth_screen(self):
         """Switch to authentication screen."""
         self.main_stack.setCurrentIndex(0)
@@ -468,9 +602,14 @@ class MainWindow(QMainWindow):
         self.main_stack.setCurrentIndex(1)
         self.update_user_display()
     
+    def show_history_screen(self):
+        """Switch to history screen."""
+        self.main_stack.setCurrentIndex(2)
+        self.refresh_history_display()
+    
     def show_paywall_screen(self):
         """Switch to paywall screen."""
-        self.main_stack.setCurrentIndex(2)
+        self.main_stack.setCurrentIndex(3)
     
     def handle_signin(self):
         """Handle sign in button."""
@@ -605,6 +744,58 @@ class MainWindow(QMainWindow):
                 self.show_auth_screen()
         
         self.update_user_display()
+    
+    def refresh_history_display(self):
+        """Refresh the analysis history display."""
+        # Clear existing rows
+        self.history_table.setRowCount(0)
+        
+        if not self.analysis_history:
+            self.history_empty.show()
+            self.history_table.hide()
+            return
+        
+        self.history_empty.hide()
+        self.history_table.show()
+        
+        # Populate table with analysis history
+        for idx, analysis in enumerate(self.analysis_history):
+            self.history_table.insertRow(idx)
+            
+            # Date
+            date_item = QTableWidgetItem(analysis.get('date', 'N/A'))
+            self.history_table.setItem(idx, 0, date_item)
+            
+            # Diagnosis
+            diagnosis_item = QTableWidgetItem(analysis.get('diagnosis', 'Unknown'))
+            self.history_table.setItem(idx, 1, diagnosis_item)
+            
+            # Severity
+            severity_item = QTableWidgetItem(analysis.get('severity', 'N/A'))
+            self.history_table.setItem(idx, 2, severity_item)
+            
+            # Confidence
+            confidence_item = QTableWidgetItem(f"{analysis.get('confidence', 0):.1%}")
+            self.history_table.setItem(idx, 3, confidence_item)
+            
+            # Actions button
+            view_btn = QPushButton("View")
+            view_btn.setMaximumWidth(80)
+            view_btn.clicked.connect(lambda checked, a=analysis: self.view_analysis_detail(a))
+            self.history_table.setCellWidget(idx, 4, view_btn)
+        
+        self.history_table.resizeColumnsToContents()
+    
+    def view_analysis_detail(self, analysis: dict):
+        """View detailed analysis result."""
+        QMessageBox.information(
+            self,
+            "Analysis Details",
+            f"Diagnosis: {analysis.get('diagnosis', 'Unknown')}\n"
+            f"Severity: {analysis.get('severity', 'N/A')}\n"
+            f"Confidence: {analysis.get('confidence', 0):.1%}\n"
+            f"Date: {analysis.get('date', 'N/A')}"
+        )
 
 
 if __name__ == "__main__":

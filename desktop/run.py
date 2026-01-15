@@ -31,7 +31,7 @@ def main():
         logger.info("Starting Skintelli application...")
         
         from PyQt6.QtWidgets import QApplication
-        from ui.main_window_new import MainWindow
+        from ui.main_window import MainWindow
         
         app = QApplication(sys.argv)
         
@@ -48,4 +48,6 @@ def main():
 
 
 if __name__ == "__main__":
+    main()
+
     main()
