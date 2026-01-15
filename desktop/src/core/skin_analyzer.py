@@ -7,6 +7,12 @@ import numpy as np
 from typing import Tuple, Dict, List, Optional
 from pathlib import Path
 
+# Optional dependencies
+try:
+    import torch
+except Exception:  # torch not installed
+    torch = None
+
 try:
     from tensorflow.keras.models import load_model
     import tensorflow as tf
@@ -20,23 +26,58 @@ class SkinAnalyzer:
     
     def __init__(self, model_path: Optional[str] = None, class_names: Optional[List[str]] = None):
         self.confidence_threshold = 0.5
-        self.model = None
-        # Default labels (update if you have the exact set from training)
+        self.tf_model = None
+        self.torch_model = None
+        self.model_load_error = None
+        self.model_type = None
+        # Default HAM10000-style labels (update if your training labels differ)
         self.class_names = class_names or [
-            "Eczema / Dermatitis",
-            "Psoriasis",
-            "Acne / Folliculitis",
-            "Fungal Infection",
-            "Benign Lesion",
-            "Malignant Lesion"
+            "Actinic keratosis / Precancerous",  # akiec
+            "Basal cell carcinoma",              # bcc
+            "Benign keratosis-like lesion",      # bkl
+            "Dermatofibroma",                    # df
+            "Melanoma",                          # mel
+            "Melanocytic nevus",                 # nv
+            "Vascular lesion"                    # vasc
         ]
-        # Auto-load model if available
-        model_file = model_path or "src/models/final_model_best.keras"
-        if load_model and tf and Path(model_file).exists():
+        # Resolve model path relative to this file if none provided
+        if model_path:
+            model_file = Path(model_path)
+        else:
+            # Prefer best.pt if present; fallback to Keras
+            pt_candidate = Path(__file__).resolve().parent.parent / "models" / "best.pt"
+            keras_candidate = Path(__file__).resolve().parent.parent / "models" / "final_model_best.keras"
+            model_file = pt_candidate if pt_candidate.exists() else keras_candidate
+
+        # Try PyTorch (.pt) first if provided
+        if model_file.suffix.lower() == ".pt" and torch is not None and model_file.exists():
             try:
-                self.model = load_model(model_file)
-            except Exception:
-                self.model = None
+                self.torch_model = torch.jit.load(str(model_file), map_location="cpu") if model_file.suffix == ".pt" else None
+                if self.torch_model is None:
+                    self.torch_model = torch.load(str(model_file), map_location="cpu")
+                self.torch_model.eval()
+                self.model_type = "torch"
+            except Exception as e:
+                self.torch_model = None
+                self.model_load_error = str(e)
+
+        # Fallback to Keras if not PT or PT failed
+        if self.torch_model is None:
+            keras_path = model_file
+            if keras_path.suffix.lower() == ".pt":
+                keras_path = Path(__file__).resolve().parent.parent / "models" / "final_model_best.keras"
+            if load_model and tf and keras_path.exists():
+                try:
+                    self.tf_model = load_model(keras_path)
+                    self.model_type = "keras"
+                except Exception as e:
+                    self.tf_model = None
+                    self.model_load_error = str(e)
+            else:
+                if not load_model or not tf:
+                    self.model_load_error = "TensorFlow not available"
+                elif not keras_path.exists():
+                    self.model_load_error = f"Model not found at {keras_path}"
         
     def analyze_image(self, image: np.ndarray) -> Dict:
         """
@@ -70,24 +111,30 @@ class SkinAnalyzer:
         condition = self._infer_condition(severity)
         confidence = self._estimate_confidence(mean_severity, affected_percentage, severity)
 
-        # If a trained model is available, use it for condition/confidence override
-        if self.model is not None:
-            model_condition, model_confidence = self._predict_model(rgb_image)
-            if model_condition:
-                condition = model_condition
-            if model_confidence is not None:
-                confidence = model_confidence
+        self._last_top_conditions = []
 
-            # Align severity with model signal (simple heuristic)
-            cond_lower = condition.lower()
-            if any(k in cond_lower for k in ["malignant", "melanoma", "cancer"]):
-                severity = "High"
-            elif any(k in cond_lower for k in ["benign"]):
-                # Keep benign lower unless rule-based found very high involvement
-                severity = "Low" if severity in ["None", "Low", "Medium"] else "Medium"
-            elif any(k in cond_lower for k in ["fungal", "eczema", "dermatitis", "psoriasis", "acne"]):
-                if severity == "High":
-                    severity = "Medium"
+        # If a trained model is available, use it for condition/confidence override
+        if self.torch_model is not None:
+            model_condition, model_confidence = self._predict_torch_model(rgb_image)
+        elif self.tf_model is not None:
+            model_condition, model_confidence = self._predict_keras_model(rgb_image)
+        else:
+            model_condition, model_confidence = (None, None)
+
+        if model_condition:
+            condition = model_condition
+        if model_confidence is not None:
+            confidence = model_confidence
+
+        # Align severity with model signal (simple heuristic)
+        cond_lower = condition.lower()
+        if any(k in cond_lower for k in ["malignant", "melanoma", "cancer"]):
+            severity = "High"
+        elif any(k in cond_lower for k in ["benign"]):
+            severity = "Low" if severity in ["None", "Low", "Medium"] else "Medium"
+        elif any(k in cond_lower for k in ["fungal", "eczema", "dermatitis", "psoriasis", "acne", "keratosis", "nevus", "bkl", "bcc", "df", "akiec", "vasc"]):
+            if severity == "High":
+                severity = "Medium"
 
         diagnosis = self._generate_diagnosis(affected_percentage, severity, condition, confidence)
         regions = self._find_regions(abnormal_mask)
@@ -100,6 +147,9 @@ class SkinAnalyzer:
             'confidence': round(confidence * 100, 1),
             'top_conditions': getattr(self, "_last_top_conditions", []),
             'affected_percentage': round(affected_percentage, 2),
+            'model_loaded': (self.torch_model is not None) or (self.tf_model is not None),
+            'model_error': self.model_load_error,
+            'model_type': self.model_type,
             'regions': regions,
             'has_issues': affected_percentage > 1.0
         }
@@ -278,16 +328,16 @@ class SkinAnalyzer:
             base = max(base * 0.2, 0.05)
         return round(base, 3)
 
-    def _predict_model(self, rgb_image: np.ndarray) -> Tuple[Optional[str], Optional[float]]:
+    def _predict_keras_model(self, rgb_image: np.ndarray) -> Tuple[Optional[str], Optional[float]]:
         """Run the loaded Keras model and return (condition, confidence). Also stores top-5 list."""
-        if self.model is None or tf is None:
+        if self.tf_model is None or tf is None:
             self._last_top_conditions = []
             return None, None
         try:
             img_resized = cv2.resize(rgb_image, (224, 224))
             img_norm = img_resized.astype("float32") / 255.0
             input_tensor = np.expand_dims(img_norm, axis=0)
-            preds = self.model.predict(input_tensor)
+            preds = self.tf_model.predict(input_tensor)
             preds = np.array(preds)
             if preds.ndim == 2:
                 probs = preds[0]
@@ -296,9 +346,55 @@ class SkinAnalyzer:
             else:
                 probs = preds.reshape(-1)
 
+            # Handle binary output: expand to two-class probs if only one logit/prob is returned
+            if probs.size == 1:
+                p = float(probs[0])
+                probs = np.array([p, 1.0 - p])
+                if len(self.class_names) < 2:
+                    self.class_names = ["Class 0", "Class 1"]
+
             # Softmax if needed
             if probs.max() > 1.0:
                 probs = tf.nn.softmax(probs).numpy() if tf is not None else probs
+            # Top-5 sorting
+            top_indices = np.argsort(probs)[::-1][:5] if probs.size else []
+            top_list = []
+            for idx in top_indices:
+                name = self.class_names[idx] if idx < len(self.class_names) else f"Class {idx}"
+                top_list.append((name, float(probs[idx]) * 100.0))
+            self._last_top_conditions = top_list
+
+            top_idx = int(top_indices[0]) if len(top_indices) > 0 else 0
+            conf = float(probs[top_idx]) if probs.size else 0.0
+
+            if self.class_names and top_idx < len(self.class_names):
+                condition = self.class_names[top_idx]
+            else:
+                condition = f"Class {top_idx}"
+            return condition, conf
+        except Exception:
+            self._last_top_conditions = []
+            return None, None
+
+    def _predict_torch_model(self, rgb_image: np.ndarray) -> Tuple[Optional[str], Optional[float]]:
+        """Run the loaded Torch model and return (condition, confidence). Also stores top-5 list."""
+        if self.torch_model is None or torch is None:
+            self._last_top_conditions = []
+            return None, None
+        try:
+            img_resized = cv2.resize(rgb_image, (224, 224))
+            img_norm = img_resized.astype("float32") / 255.0
+            img_chw = np.transpose(img_norm, (2, 0, 1))  # HWC -> CHW
+            input_tensor = torch.from_numpy(img_chw).unsqueeze(0)
+            with torch.no_grad():
+                logits = self.torch_model(input_tensor)
+                if isinstance(logits, (list, tuple)):
+                    logits = logits[0]
+                if hasattr(logits, "detach"):
+                    logits = logits.detach().cpu()
+                probs = torch.softmax(logits, dim=-1).numpy()
+            probs = probs.reshape(-1)
+
             # Top-5 sorting
             top_indices = np.argsort(probs)[::-1][:5] if probs.size else []
             top_list = []

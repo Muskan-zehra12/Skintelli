@@ -585,17 +585,21 @@ class DualPanelWidget(QWidget):
             top_lines = []
             for name, pct in top_conditions:
                 top_lines.append(f"- {name}: {pct:.1f}%")
-            top_block = "\n".join(top_lines) if top_lines else "- N/A"
+            top_block = "\n".join(top_lines) if top_lines else "- N/A (model not loaded or no output)"
 
             condition = results.get('condition', 'Unknown')
             confidence = results.get('confidence', 0.0)
+            model_loaded = results.get('model_loaded', False)
+            model_error = results.get('model_error', None)
             
             diagnosis_text = (
                 f"✅ Analysis Complete\n\n"
                 f"{severity_emoji} Severity: {severity}\n"
                 f"📊 Affected Area: {affected:.1f}%\n"
                 f"🧾 Condition (model): {condition} ({confidence:.1f}%)\n"
-                f"🏷 Top-5 predictions:\n{top_block}\n\n"
+                f"🏷 Top-5 predictions:\n{top_block}\n"
+                f"⚙️ Model status: {'Loaded' if model_loaded else 'Not loaded'}"
+                f"{f' (Error: {model_error})' if model_error else ''}\n\n"
                 f"📝 Diagnosis:\n{results['diagnosis']}"
             )
             self.explanation_label.setText(diagnosis_text)
