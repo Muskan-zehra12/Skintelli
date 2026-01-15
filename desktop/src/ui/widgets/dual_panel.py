@@ -19,23 +19,16 @@ class DualPanelWidget(QWidget):
         layout.setSpacing(15)
         layout.setContentsMargins(15, 15, 15, 15)
 
-        # Hide controls layout - main window has controls now
+        # Controls layout (visible for direct access)
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(10)
         
-        # Keep buttons for compatibility but hide them
         self.upload_btn = QPushButton("📁 Upload Image")
         self.camera_btn = QPushButton("📷 Use Camera")
         self.capture_btn = QPushButton("📸 Capture Image")
         self.capture_btn.setEnabled(False)
         self.analyze_btn = QPushButton("🔬 Analyze")
         self.analyze_btn.setEnabled(False)
-        
-        # Hide all control buttons
-        self.upload_btn.setVisible(False)
-        self.camera_btn.setVisible(False)
-        self.capture_btn.setVisible(False)
-        self.analyze_btn.setVisible(False)
         
         # Style buttons
         button_style = """

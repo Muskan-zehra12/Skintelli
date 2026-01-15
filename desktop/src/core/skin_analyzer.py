@@ -37,16 +37,22 @@ class SkinAnalyzer:
         # Generate heatmap overlay
         heatmap = self._create_heatmap(image, severity_map)
         
-        # Analyze findings
-        affected_percentage = (abnormal_mask.sum() / abnormal_mask.size) * 100
+        # Analyze findings (normalize mask to binary to avoid 0-255 inflation)
+        affected_pixels = (abnormal_mask > 0).sum()
+        affected_percentage = (affected_pixels / abnormal_mask.size) * 100
+        mean_severity = severity_map[severity_map > 0].mean() if (severity_map > 0).any() else 0
         severity = self._calculate_severity(affected_percentage, severity_map)
-        diagnosis = self._generate_diagnosis(affected_percentage, severity)
+        condition = self._infer_condition(severity)
+        confidence = self._estimate_confidence(mean_severity, affected_percentage, severity)
+        diagnosis = self._generate_diagnosis(affected_percentage, severity, condition, confidence)
         regions = self._find_regions(abnormal_mask)
         
         return {
             'heatmap': heatmap,
             'diagnosis': diagnosis,
             'severity': severity,
+            'condition': condition,
+            'confidence': round(confidence * 100, 1),
             'affected_percentage': round(affected_percentage, 2),
             'regions': regions,
             'has_issues': affected_percentage > 1.0
@@ -200,13 +206,45 @@ class SkinAnalyzer:
             return "Medium"
         else:
             return "High"
-    
-    def _generate_diagnosis(self, affected_percentage: float, severity: str) -> str:
-        """Generate human-readable diagnosis."""
+
+    def _infer_condition(self, severity: str) -> str:
+        """Map severity to a human-readable condition guess."""
         if severity == "None":
-            return "✓ No significant skin abnormalities detected. Skin appears healthy."
+            return "No significant abnormality"
+        if severity == "Low":
+            return "Mild irritation / dermatitis"
+        if severity == "Medium":
+            return "Moderate dermatitis / rash"
+        return "Severe inflammation / possible infection"
+
+    def _estimate_confidence(self, mean_severity: float, affected_percentage: float, severity: str) -> float:
+        """Estimate confidence (0-1) from severity map strength and affected area."""
+        # Normalize inputs
+        sev_score = min(mean_severity / 255.0, 1.0)
+        area_score = min(affected_percentage / 20.0, 1.0)
+        base = (sev_score * 0.6) + (area_score * 0.4)
+        # Slight bump for higher severity labels
+        if severity == "High":
+            base = min(base + 0.1, 1.0)
+        elif severity == "Medium":
+            base = min(base + 0.05, 1.0)
+        elif severity == "None":
+            base = max(base * 0.2, 0.05)
+        return round(base, 3)
+    
+    def _generate_diagnosis(self, affected_percentage: float, severity: str, condition: str, confidence: float) -> str:
+        """Generate human-readable diagnosis with condition and confidence."""
+        confidence_pct = confidence * 100
+        if severity == "None":
+            return (
+                f"Condition: {condition} (Confidence: {confidence_pct:.1f}%)\n"
+                "✓ No significant skin abnormalities detected. Skin appears healthy."
+            )
         
-        diagnosis = f"⚠ Detected potential skin abnormalities in {affected_percentage:.1f}% of the examined area.\n\n"
+        diagnosis = (
+            f"Condition: {condition} (Confidence: {confidence_pct:.1f}%)\n"
+            f"⚠ Detected potential skin abnormalities in {affected_percentage:.1f}% of the examined area.\n\n"
+        )
         
         if severity == "Low":
             diagnosis += "Severity: LOW\n"
