@@ -177,34 +177,5 @@ class UserManager:
         self._save_users()
         
         return True, "Successfully upgraded to Pro!"
-        
-        if success:
-            self.current_user = username
-            logger.info(f"User logged in: {username}")
-        else:
-            logger.warning(f"Login failed for user: {username}")
-        
-        return success, msg
-    
-    def logout(self):
-        """Logout current user"""
-        if self.current_user:
-            logger.info(f"User logged out: {self.current_user}")
-            self.current_user = None
-    
-    def get_current_user(self) -> str:
-        """Get currently logged in user"""
-        return self.current_user
-    
-    def is_authenticated(self) -> bool:
-        """Check if user is authenticated"""
-        return self.current_user is not None
-    
-    def user_exists(self, username: str) -> bool:
-        """Check if user exists"""
-        return self.user_manager.user_exists(username)
-    
-    def close(self):
-        """Close database connection"""
-        self.user_manager.close()
+
 
