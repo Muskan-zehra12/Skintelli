@@ -5,6 +5,73 @@ All notable changes to the Skintelli project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-15
+
+### Added
+- **Unified Application Architecture**
+  - Successfully merged main_window.py and main_window_new.py implementations
+  - Single, production-ready codebase with all features integrated
+  - 4 integrated screens: Authentication, Analysis, History, Paywall
+  
+- **Analysis History Screen**
+  - Complete history tracking of all performed analyses
+  - Table view with Date, Diagnosis, Severity, Confidence columns
+  - Quick detail view button for each analysis record
+  - Empty state message when no history exists
+  - Easy navigation between analysis and history screens
+  
+- **Background Processing**
+  - AnalysisWorker thread class for non-blocking analysis
+  - Progress signals for real-time user feedback
+  - Proper thread cleanup and error handling
+  - No UI freezing during image analysis
+  
+- **Enhanced Navigation**
+  - History button (📋) added to analysis screen header
+  - Color-coded buttons (purple for history, red for logout)
+  - Smooth transitions between all 4 screens
+  - Back buttons on history and paywall screens
+  
+- **Code Organization**
+  - Consolidated UserManager authentication
+  - Integrated GuestUsageTracker for limits
+  - Combined analysis engine features
+  - Unified DualPanelWidget for camera/upload
+  - Removed duplicate implementations
+
+### Changed
+- **Application Structure**
+  - Stacked widget now uses all 4 screen indices (0-3)
+  - Analysis screen now at index 1 (was 1)
+  - Paywall screen now at index 3 (was 2)
+  - History screen now at index 2 (new)
+  
+- **MainWindow Initialization**
+  - All screens created and added to stack widget
+  - Proper index mapping for screen transitions
+  - Enhanced logging throughout application
+  - Better error handling and user feedback
+
+### Improved
+- **User Experience**
+  - Faster analysis with background threading
+  - Better feedback during processing
+  - More intuitive history access
+  - Consistent navigation patterns
+  
+- **Code Quality**
+  - Reduced code duplication
+  - Better separation of concerns
+  - Improved maintainability
+  - Enhanced documentation
+
+### Technical Details
+- Lines added: ~150 in main_window.py
+- Classes added: AnalysisWorker (QThread)
+- Methods added: show_history_screen(), refresh_history_display(), view_analysis_detail()
+- Git commit: fb70427
+- No breaking changes
+
 ## [1.1.0] - 2026-01-15
 
 ### Added

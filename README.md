@@ -62,6 +62,52 @@ An AI-powered desktop application for detecting skin diseases, infections, and a
 - **High-Quality Scaling**: Smooth rendering at all sizes
 - **File Info Display**: Shows file name and size after upload
 
+### 📚 Analysis History
+- **Track All Analyses**: Complete history of all performed analyses
+- **Detailed Records**: Date, diagnosis, severity, and confidence stored
+- **Quick Review**: Access history from dedicated history screen
+- **View Details**: Click to review specific analysis results
+- **Easy Navigation**: History button in analysis screen header
+
+## 🏗️ Application Architecture
+
+The unified Skintelli application consists of 4 integrated screens:
+
+```
+┌─────────────────────────────────────────┐
+│          Skintelli Main Window          │
+├─────────────────────────────────────────┤
+│                                         │
+│  1. Authentication Screen               │
+│     ├── Sign In Tab (Email + Password)  │
+│     ├── Sign Up Tab (Create Account)    │
+│     └── Guest Login (3 free attempts)   │
+│                                         │
+│  2. Analysis Screen                     │
+│     ├── User Info & Usage Display       │
+│     ├── History Button                  │
+│     ├── Camera Controls (Brightness/    │
+│     │   Contrast sliders)               │
+│     ├── Upload & Capture Options        │
+│     └── Live Preview + Heatmap Results  │
+│                                         │
+│  3. History Screen                      │
+│     ├── Analysis Records Table          │
+│     ├── Date, Diagnosis, Severity,      │
+│     │   Confidence columns              │
+│     ├── View Details Action             │
+│     └── Back to Analysis Button         │
+│                                         │
+│  4. Paywall Screen                      │
+│     ├── Feature Comparison              │
+│     ├── Free vs Pro Tiers               │
+│     ├── Pricing Display                 │
+│     ├── Upgrade to Pro Button           │
+│     └── Maybe Later Button              │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
 ## 📁 Project Structure
 
 ```
