@@ -78,6 +78,17 @@ class SkinAnalyzer:
             if model_confidence is not None:
                 confidence = model_confidence
 
+            # Align severity with model signal (simple heuristic)
+            cond_lower = condition.lower()
+            if any(k in cond_lower for k in ["malignant", "melanoma", "cancer"]):
+                severity = "High"
+            elif any(k in cond_lower for k in ["benign"]):
+                # Keep benign lower unless rule-based found very high involvement
+                severity = "Low" if severity in ["None", "Low", "Medium"] else "Medium"
+            elif any(k in cond_lower for k in ["fungal", "eczema", "dermatitis", "psoriasis", "acne"]):
+                if severity == "High":
+                    severity = "Medium"
+
         diagnosis = self._generate_diagnosis(affected_percentage, severity, condition, confidence)
         regions = self._find_regions(abnormal_mask)
         
