@@ -4,14 +4,39 @@ Detects and marks areas of potential skin conditions in images.
 """
 import cv2
 import numpy as np
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict, List, Optional
+from pathlib import Path
+
+try:
+    from tensorflow.keras.models import load_model
+    import tensorflow as tf
+except Exception:  # tensorflow not installed or import error
+    load_model = None
+    tf = None
 
 
 class SkinAnalyzer:
     """Analyzes skin images for potential infections, injuries, or abnormalities."""
     
-    def __init__(self):
+    def __init__(self, model_path: Optional[str] = None, class_names: Optional[List[str]] = None):
         self.confidence_threshold = 0.5
+        self.model = None
+        # Default labels (update if you have the exact set from training)
+        self.class_names = class_names or [
+            "Eczema / Dermatitis",
+            "Psoriasis",
+            "Acne / Folliculitis",
+            "Fungal Infection",
+            "Benign Lesion",
+            "Malignant Lesion"
+        ]
+        # Auto-load model if available
+        model_file = model_path or "src/models/final_model_best.keras"
+        if load_model and tf and Path(model_file).exists():
+            try:
+                self.model = load_model(model_file)
+            except Exception:
+                self.model = None
         
     def analyze_image(self, image: np.ndarray) -> Dict:
         """
@@ -44,6 +69,15 @@ class SkinAnalyzer:
         severity = self._calculate_severity(affected_percentage, severity_map)
         condition = self._infer_condition(severity)
         confidence = self._estimate_confidence(mean_severity, affected_percentage, severity)
+
+        # If a trained model is available, use it for condition/confidence override
+        if self.model is not None:
+            model_condition, model_confidence = self._predict_model(rgb_image)
+            if model_condition:
+                condition = model_condition
+            if model_confidence is not None:
+                confidence = model_confidence
+
         diagnosis = self._generate_diagnosis(affected_percentage, severity, condition, confidence)
         regions = self._find_regions(abnormal_mask)
         
@@ -53,6 +87,7 @@ class SkinAnalyzer:
             'severity': severity,
             'condition': condition,
             'confidence': round(confidence * 100, 1),
+            'top_conditions': getattr(self, "_last_top_conditions", []),
             'affected_percentage': round(affected_percentage, 2),
             'regions': regions,
             'has_issues': affected_percentage > 1.0
@@ -231,6 +266,47 @@ class SkinAnalyzer:
         elif severity == "None":
             base = max(base * 0.2, 0.05)
         return round(base, 3)
+
+    def _predict_model(self, rgb_image: np.ndarray) -> Tuple[Optional[str], Optional[float]]:
+        """Run the loaded Keras model and return (condition, confidence). Also stores top-5 list."""
+        if self.model is None or tf is None:
+            self._last_top_conditions = []
+            return None, None
+        try:
+            img_resized = cv2.resize(rgb_image, (224, 224))
+            img_norm = img_resized.astype("float32") / 255.0
+            input_tensor = np.expand_dims(img_norm, axis=0)
+            preds = self.model.predict(input_tensor)
+            preds = np.array(preds)
+            if preds.ndim == 2:
+                probs = preds[0]
+            elif preds.ndim == 1:
+                probs = preds
+            else:
+                probs = preds.reshape(-1)
+
+            # Softmax if needed
+            if probs.max() > 1.0:
+                probs = tf.nn.softmax(probs).numpy() if tf is not None else probs
+            # Top-5 sorting
+            top_indices = np.argsort(probs)[::-1][:5] if probs.size else []
+            top_list = []
+            for idx in top_indices:
+                name = self.class_names[idx] if idx < len(self.class_names) else f"Class {idx}"
+                top_list.append((name, float(probs[idx]) * 100.0))
+            self._last_top_conditions = top_list
+
+            top_idx = int(top_indices[0]) if len(top_indices) > 0 else 0
+            conf = float(probs[top_idx]) if probs.size else 0.0
+
+            if self.class_names and top_idx < len(self.class_names):
+                condition = self.class_names[top_idx]
+            else:
+                condition = f"Class {top_idx}"
+            return condition, conf
+        except Exception:
+            self._last_top_conditions = []
+            return None, None
     
     def _generate_diagnosis(self, affected_percentage: float, severity: str, condition: str, confidence: float) -> str:
         """Generate human-readable diagnosis with condition and confidence."""
